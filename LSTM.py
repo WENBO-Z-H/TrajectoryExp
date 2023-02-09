@@ -23,17 +23,14 @@ learning_rate = 0.01
 
 class TrajectoryDataset(Dataset):
     def __init__(self, len_sections):
+        self.real_data = []
+        self.dummy_data = []
         self.ReadGeoLifeDataset()  # 读取真实轨迹数据
-        # dummy_traj_list = []
-        # for i in range(100):
-        #     dummy_traj = MNAlgorithm.MovingInNeighborhood(0.0001, 100)
-        #     dum
-        print(len(self.data))
-        self.data = self.data[:(len(self.data) // len_sections) * len_sections]
-        print(len(self.data))
-        arr = np.array(self.data).reshape(len(self.data) // len_sections, len_sections, 2)
-        # print(arr)
-        print(arr.shape)
+        self.GenerateDummyTrajectory(10)  # 生成虚拟轨迹数据
+
+        print("\n\n")
+        print(self.real_data.shape)
+        print(self.dummy_data.shape)
 
     def __getitem__(self, index):
         """
@@ -51,14 +48,17 @@ class TrajectoryDataset(Dataset):
         return len(self.data)
 
     def ReadGeoLifeDataset(self):
-        # 读取Geolife数据集
+        """
+        读取Geolife数据集
+        :return: 将读取结果保存在self.real_data中
+        """
         lat = []  # 维度
         lng = []  # 经度
-        people_ids = os.scandir(os.getcwd() + "\\Geolife Trajectories 1.3" + "\\Data")
+        people_ids = os.scandir("..\\Geolife Trajectories 1.3" + "\\Data")
         for people_id in people_ids:
             print(people_id.name)
             # 数据集每个个体数据的总路径
-            path = os.getcwd() + "\\Geolife Trajectories 1.3" + "\\Data" + "\\" + people_id.name + "\\Trajectory"
+            path = "..\\Geolife Trajectories 1.3" + "\\Data" + "\\" + people_id.name + "\\Trajectory"
             plts = os.scandir(path)
             # 每一个文件的绝对路径
             for item in plts:
@@ -71,11 +71,31 @@ class TrajectoryDataset(Dataset):
             lat_new = [float(x) for x in lat]
             lng_new = [float(x) for x in lng]
         points = list(zip(lat_new, lng_new))
-        self.data = points
+        points = points[:(len(points) // len_sections) * len_sections]  # 切除分段多余部分
+        self.real_data = np.array(points).reshape(len(points) // len_sections, len_sections, 2)  # 分段
+
+    def GenerateDummyTrajectory(self, n):
+        """
+        生成多条符合一定格式的虚拟轨迹
+        :param n: 生成虚拟轨迹的条数
+        :return: 将结果保存至self.dummy_data
+        """
+        trajetorys = []
+        for i in range(n):  # 生成x条轨迹
+            dummy_traj = MNAlgorithm.MovingInNeighborhood(0.0001, 100)  # 生成单条轨迹
+            # 单条轨迹处理
+            dummy_traj = dummy_traj[:(len(dummy_traj) // len_sections) * len_sections]  # 切除分段多余部分
+            arr = np.array(dummy_traj).reshape(len(dummy_traj) // len_sections, len_sections, 2)  # 分段（没有时间维度）
+            trajetorys.append(arr)
+        dummy_traj_arr = np.concatenate(trajetorys, axis=0)
+        print(dummy_traj_arr[:2])
+        self.dummy_data = dummy_traj_arr
 
 
-# Dummy Trajectory Recognition Scheme Based on LSTM (many-to-one)
 class RNN(nn.Module):
+    """
+    Dummy Trajectory Recognition Scheme Based on LSTM (many-to-one)
+    """
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
         super(RNN, self).__init__()
         self.hidden_size = hidden_size

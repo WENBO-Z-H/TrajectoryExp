@@ -9,10 +9,10 @@ plt.rcParams['font.sans-serif'] = ['SimHei']
 plt.rcParams['axes.unicode_minus'] = False
 # matplotlib画图中中文显示会有问题，需要这两行设置默认字体
 
-# 纬度
+# 纬度范围
 minLat = 39.7817
 maxLat = 40.1075
-# 经度
+# 经度范围
 minLng = 116.1715
 maxLng = 116.5728
 
@@ -41,28 +41,30 @@ class DummyPoint:
 
 def MovingInNeighborhood(m, n):
     """
+    生成一条虚拟轨迹
     :param m: 每次移动的幅度
-    :param n: 距离长度
+    :param n: 轨迹长度
     :return: 虚拟轨迹
     """
     dummyPretemp = DummyPoint()  # 前一时刻用户位置及时间信息
     dummyNexttemp = DummyPoint()  # 后一时刻用户位置及时间信息
     dummyNexttemp.lng = random.uniform(minLng, maxLng)
     dummyNexttemp.lat = random.uniform(minLat, maxLat)
-    dummys = [[dummyNexttemp.lng, dummyNexttemp.lat, 0]]  # 初始状态，轨迹列表只有初始点
+    # dummys = [[dummyNexttemp.lat, dummyNexttemp.lng, 0]]  # 初始状态，轨迹列表只有初始点
+    dummys = [[dummyNexttemp.lat, dummyNexttemp.lng]]  # 初始状态，轨迹列表只有初始点（删除时间维度）
 
     i = 0
     dummyPretemp = dummyNexttemp
-    while i < n:
+    while i < n-1:
         # 生成下一位置及时间信息
         dummyNexttemp.lng = random.uniform(dummyPretemp.lng - m, dummyPretemp.lng + m)
         dummyNexttemp.lat = random.uniform(dummyPretemp.lat - m, dummyPretemp.lat + m)
         dummyNexttemp.t = dummyPretemp.t + 1
         if dummyNexttemp.WithinBounds():  # 在规定区域内才添加到列表，否则重新生成
             dummyPretemp = dummyNexttemp
-            dummys.append([dummyNexttemp.lng, dummyNexttemp.lat, dummyNexttemp.t])
+            # dummys.append([dummyNexttemp.lat, dummyNexttemp.lng, dummyNexttemp.t])
+            dummys.append([dummyNexttemp.lat, dummyNexttemp.lng])  # 删除时间维度
             i = i + 1
-
     return dummys
 
 
