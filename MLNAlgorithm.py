@@ -72,7 +72,9 @@ def MovingInNeighborhood(aveP, m, n):
     dummyNexttemp.lat = random.uniform(minLat, maxLat)
     # dummys = [[dummyNexttemp.lat, dummyNexttemp.lng, 0]]  # 初始状态，轨迹列表只有初始点
     dummys = [[dummyNexttemp.lat, dummyNexttemp.lng]]  # 初始状态，轨迹列表只有初始点(删除时间维度)
+
     i = 0
+    num_errors = 50  # 有时候出界后回不去，这种状态最多卡死num_errors次，就会随机选择一个位置跳出
     dummyPretemp = dummyNexttemp
     while i < n-1:
         # 生成下一位置及时间信息
@@ -90,6 +92,13 @@ def MovingInNeighborhood(aveP, m, n):
             # dummys.append([dummyNexttemp.lat, dummyNexttemp.lng, dummyNexttemp.t])
             dummys.append([dummyNexttemp.lat, dummyNexttemp.lng])  # 删除时间维度
             i = i + 1
+        else:  # 如果一直发生越界错误就随机找一个点（该情况存在但极少）
+            if num_errors > 0:
+                num_errors -= 1
+            else:
+                lng = random.uniform(minLng, maxLng)
+                lat = random.uniform(minLat, maxLat)
+                dummys.append([lat, lng])  # 删除时间维度
     return dummys
 
 
