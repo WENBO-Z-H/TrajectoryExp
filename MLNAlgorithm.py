@@ -102,7 +102,7 @@ def MovingInNeighborhood(aveP, m, n):
     return dummys
 
 
-def draw(dummys):
+def Draw(dummys):
     plt.figure()
     plt.xlabel('Lng')
     plt.ylabel('Lat')
@@ -125,4 +125,4 @@ def draw(dummys):
 if __name__ == '__main__':
     dummys = MovingInNeighborhood(5, 0.0001, 10)
     print(dummys)
-    draw(dummys)
+    Draw(dummys)

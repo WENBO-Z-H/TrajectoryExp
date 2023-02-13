@@ -77,7 +77,7 @@ def MovingInNeighborhood(m, n):
     return dummys
 
 
-def draw(dummys):
+def Draw(dummys):
     """
     绘制虚拟轨迹
     :param dummys: 虚拟轨迹(列表格式)
