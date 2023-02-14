@@ -20,9 +20,67 @@ gridSize = 256
 
 
 def ParseTime(time_str):
+    """
+    把"hh:mm:ss"格式的时间转换为秒数
+    :param time_str: 字符串格式的时间
+    :return: 转换成的秒数
+    """
     time_list = time_str.split(':')
     seconds = int(time_list[0]) * 3600 + int(time_list[1]) * 60 + int(time_list[2])
     return seconds
+
+
+def VectorUnitize(vector):
+    """
+    向量单位化
+    :param vector: 含2个元素的向量
+    :return: 单位化的向量
+    """
+    length = math.sqrt(vector[0] ** 2 + vector[1] ** 2)
+    return vector / length
+
+
+def CalAverage(data_list):
+    """
+    计算一个方向向量列表的平均值
+    :param data_list: 目标列表
+    :return: 平均方向（x,y组成的向量）
+    """
+    x, y = 0, 0
+    for item in data_list:
+        x += item[0]
+        y += item[1]
+    x /= len(data_list)
+    y /= len(data_list)
+    return x, y
+
+
+def CalMedian(data_list):
+    """
+    计算一个列表的中位数
+    :param data_list: 目标列表
+    :return: 目标列表的中位数
+    """
+    data_list = sorted(data_list)
+    length = len(data_list)
+    if len(data_list) % 2 == 0:  # 偶数
+        return 0.5 * (data_list[length // 2] + data_list[length // 2 - 1])
+    else:
+        return data_list[length // 2 + 1]
+
+
+def VecToAngle(dir_vec):
+    """
+    计算一个方向向量与正北方向的夹角
+    :param dir_vec: 含 x,y 2个元素的方向向量
+    :return: 其与正北方向夹角的余弦值[-1, 1]
+    """
+    north_vec = (0, 1)
+    dir_vec = VectorUnitize(dir_vec)  # 化为单位向量
+    len_north_vec = 1
+    len_dir_vec = 1
+    cos_theta = (north_vec[0] * dir_vec[0] + north_vec[1] * dir_vec[1]) / (len_north_vec * len_dir_vec)
+    return cos_theta
 
 
 def GetData(user_id):
@@ -101,6 +159,12 @@ def GetCellID(lat, lng):
 
 
 def CalDist(point1, point2):
+    """
+    计算两位置点间欧式距离
+    :param point1:
+    :param point2:
+    :return: 距离
+    """
     return math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
 
 
@@ -108,17 +172,17 @@ def EncodeTraj(data):
     """
     轨迹iT2I编码
     :param data: 三维列表表示的轨迹数据，第1维表示轨迹数目，第2维表示轨迹中的位置点数目，第3维表示纬度和经度
-    :return:
+    :return: 编码后的 5 * gridSize * gridSize 的矩阵
     """
     m_i1 = [[0 for i in range(gridSize)] for i in range(gridSize)]
     m_i2 = [[0 for i in range(gridSize)] for i in range(gridSize)]
     m_i3 = [[0 for i in range(gridSize)] for i in range(gridSize)]
     m_i4 = [[0 for i in range(gridSize)] for i in range(gridSize)]
     m_i5 = [[0 for i in range(gridSize)] for i in range(gridSize)]
-    num_cell_points = [[0 for i in range(gridSize)] for i in range(gridSize)]
 
-    # 第一次循环构造m_i1和m_i2
-    print("第一次循环构造m_i1和m_i2")
+    # 第一次遍历构造m_i1和m_i2 (一个路径遍历和一个网格遍历)
+    num_cell_points = [[0 for i in range(gridSize)] for i in range(gridSize)]
+    print("第一次遍历构造m_i1和m_i2")
     for traj in data:  # item是二维列表，表示多个位置点
         for point in traj:
             x, y = GetCellID(point[0], point[1])
@@ -126,37 +190,54 @@ def EncodeTraj(data):
             num_cell_points[x][y] += 1
             m_i1[x][y] = 1  # 构建
             m_i2[x][y] += point[2]
-            for i in range(gridSize):
-                for j in range(gridSize):
-                    if num_cell_points[i][j] == 0:  # 网格无点则保持为0
-                        pass
-                    else:  # 网格有点则取时间平均值
-                        m_i2[i][j] = m_i2[i][j] / num_cell_points[i][j]
+    for i in range(gridSize):
+        for j in range(gridSize):
+            if num_cell_points[i][j] == 0:  # 网格无点则保持为0
+                pass
+            else:  # 网格有点则取时间平均值
+                m_i2[i][j] = m_i2[i][j] / num_cell_points[i][j]
 
-    # 第二次循环构造m_i3,m_i4,m_i5]
-    print("第二次循环构造m_i3, m_i4, m_i5")
+    # 第二次循环构造m_i3,m_i4,m_i5
     cell_speed_list = [[[] for i in range(gridSize)] for i in range(gridSize)]  # 每个网格里的速度值，最后需要求中位数
+    cell_direction_list = [[[] for i in range(gridSize)] for i in range(gridSize)]  # 每个网格里的方向值，最后需要求平均数
     cell_acceleration_list = [[[] for i in range(gridSize)] for i in range(gridSize)]  # 每个网格里的加速度值，最后需要求中位数
-    first_point = True  # 由于第一个点的速度和加速度都直接初始化为0，所以处理方式和其他点有区别
-    last_speed = 0  # 上一个点的速度
+    print("第二次循环构造m_i3, m_i4, m_i5")
+
     for traj_id in range(len(data)):  # item是二维列表，表示多个位置点
         print(traj_id)
+        first_point = True  # 由于第一个点的速度和加速度都直接初始化为0，所以处理方式和其他点有区别
+        last_speed = 0  # 上一个点的速度
         for point_id in range(len(data[traj_id])):
             x, y = GetCellID(data[traj_id][point_id][0], data[traj_id][point_id][1])
             # print("x,y: ", x, y)
             if first_point:
                 m_i3[x][y] = 0
+                m_i4[x][y] = 0
                 m_i5[x][y] = 0
                 last_speed = 0
             else:
                 delta_t = data[traj_id][point_id][2] - data[traj_id][point_id - 1][2]  # 该点与上一点的时间差
                 speed = CalDist(data[traj_id][point_id], data[traj_id][point_id - 1]) / delta_t  # 该点速度
+                direction = VectorUnitize(data[traj_id][point_id] - data[traj_id][point_id - 1])  # 该点前进方向
                 acceleration = (speed-last_speed) / delta_t  # 该点加速度
                 cell_speed_list[x][y].append(speed)  # 添加到网格速度列表
+                cell_direction_list.append(direction)  # 添加到网格方向列表
                 cell_acceleration_list[x][y].append(acceleration)    # 添加到网格加速度列表
                 last_speed = speed  # 更新上一个点的速度
+    for i in range(gridSize):
+        for j in range(gridSize):
+            if num_cell_points[i][j] == 0:  # 网格无点则保持为0
+                pass
+            else:  # 网格有点则取速度和加速度的中值，方向的平均值
+                pass
+                m_i3[i][j] = CalMedian(cell_speed_list[i][j])
+                m_i4[i][j] = CalAverage(cell_direction_list[i][j])
+                m_i5[i][j] = CalMedian(cell_acceleration_list[i][j])
+
     M = [m_i1, m_i2, m_i3, m_i4, m_i5]
     M = torch.tensor(M)
+
+    return M
 
 
 if __name__ == '__main__':
