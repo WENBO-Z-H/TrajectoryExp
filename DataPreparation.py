@@ -4,8 +4,9 @@
 import math
 import os
 import torch
+import numpy as np
 import matplotlib.pyplot as plt
-
+# torch.set_printoptions(threshold=np.inf)
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
 
@@ -36,8 +37,13 @@ def VectorUnitize(vector):
     :param vector: 含2个元素的向量
     :return: 单位化的向量
     """
+    # print("vector: (", vector[0], vector[1], ")")
     length = math.sqrt(vector[0] ** 2 + vector[1] ** 2)
-    return vector / length
+
+    if length == 0:
+        return 0, 0
+    else:
+        return vector[0] / length, vector[1] / length
 
 
 def CalAverage(data_list):
@@ -46,12 +52,16 @@ def CalAverage(data_list):
     :param data_list: 目标列表
     :return: 平均方向（x,y组成的向量）
     """
+    # print("CalAverage")
+    length = len(data_list)
+    if length == 0:  # 空列表的平均数按0计算
+        return [0, 0]
     x, y = 0, 0
     for item in data_list:
         x += item[0]
         y += item[1]
-    x /= len(data_list)
-    y /= len(data_list)
+    x /= length
+    y /= length
     return x, y
 
 
@@ -61,12 +71,15 @@ def CalMedian(data_list):
     :param data_list: 目标列表
     :return: 目标列表的中位数
     """
-    data_list = sorted(data_list)
+    # print("CalMedian")
     length = len(data_list)
+    if length == 0:  # 空列表中位数按0计算
+        return 0
+    data_list = sorted(data_list)
     if len(data_list) % 2 == 0:  # 偶数
         return 0.5 * (data_list[length // 2] + data_list[length // 2 - 1])
     else:
-        return data_list[length // 2 + 1]
+        return data_list[length // 2]
 
 
 def VecToAngle(dir_vec):
@@ -87,7 +100,7 @@ def GetData(user_id):
     """
     读取Geolife 1.3数据集中特定id用户的前100条处于北京地区的轨迹数据
     :param user_id:
-    :return: 三维列表表示的轨迹数据，第1维表示轨迹数目，第2维表示轨迹中的位置点数目，第3维表示纬度和经度
+    :return: 三维列表表示的轨迹数据，第1维表示轨迹数目，第2维表示轨迹中的位置点数目，第3维表示纬度和经度和时间
     """
     lat_str = []  # 纬度
     lng_str = []  # 经度
@@ -168,28 +181,35 @@ def CalDist(point1, point2):
     return math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
 
 
-def EncodeTraj(data):
+def EncodeTrajWithIT2I(data):
     """
     轨迹iT2I编码
-    :param data: 三维列表表示的轨迹数据，第1维表示轨迹数目，第2维表示轨迹中的位置点数目，第3维表示纬度和经度
-    :return: 编码后的 5 * gridSize * gridSize 的矩阵
+    :param data: 二维列表表示的轨迹数据，第1维表示轨迹中的位置点数目，第2维表示纬度和经度
+    :return: 编码后的 5 * gridSize * gridSize 的矩阵组成的列表
     """
+    num_trajs = len(data)
     m_i1 = [[0 for i in range(gridSize)] for i in range(gridSize)]
     m_i2 = [[0 for i in range(gridSize)] for i in range(gridSize)]
     m_i3 = [[0 for i in range(gridSize)] for i in range(gridSize)]
     m_i4 = [[0 for i in range(gridSize)] for i in range(gridSize)]
     m_i5 = [[0 for i in range(gridSize)] for i in range(gridSize)]
+    # M_list = [0 for i in range(num_trajs)]
 
     # 第一次遍历构造m_i1和m_i2 (一个路径遍历和一个网格遍历)
     num_cell_points = [[0 for i in range(gridSize)] for i in range(gridSize)]
-    print("第一次遍历构造m_i1和m_i2")
+    # num_cell_points_list = [0 for i in range()]
+    #print("第一次遍历构造m_i1和m_i2")
     for traj in data:  # item是二维列表，表示多个位置点
+        #print('第一阶段的单条轨迹')
         for point in traj:
+            # print(point)
             x, y = GetCellID(point[0], point[1])
             # print("x,y: ", x, y)
             num_cell_points[x][y] += 1
             m_i1[x][y] = 1  # 构建
             m_i2[x][y] += point[2]
+    # print(m_i2)
+    # print(num_cell_points)
     for i in range(gridSize):
         for j in range(gridSize):
             if num_cell_points[i][j] == 0:  # 网格无点则保持为0
@@ -201,10 +221,11 @@ def EncodeTraj(data):
     cell_speed_list = [[[] for i in range(gridSize)] for i in range(gridSize)]  # 每个网格里的速度值，最后需要求中位数
     cell_direction_list = [[[] for i in range(gridSize)] for i in range(gridSize)]  # 每个网格里的方向值，最后需要求平均数
     cell_acceleration_list = [[[] for i in range(gridSize)] for i in range(gridSize)]  # 每个网格里的加速度值，最后需要求中位数
-    print("第二次循环构造m_i3, m_i4, m_i5")
+    #print("第二次循环构造m_i3, m_i4, m_i5")
 
     for traj_id in range(len(data)):  # item是二维列表，表示多个位置点
-        print(traj_id)
+        # print(traj_id)
+        #print('第二阶段的单条轨迹')
         first_point = True  # 由于第一个点的速度和加速度都直接初始化为0，所以处理方式和其他点有区别
         last_speed = 0  # 上一个点的速度
         for point_id in range(len(data[traj_id])):
@@ -215,15 +236,19 @@ def EncodeTraj(data):
                 m_i4[x][y] = 0
                 m_i5[x][y] = 0
                 last_speed = 0
+                first_point = False
             else:
                 delta_t = data[traj_id][point_id][2] - data[traj_id][point_id - 1][2]  # 该点与上一点的时间差
                 speed = CalDist(data[traj_id][point_id], data[traj_id][point_id - 1]) / delta_t  # 该点速度
-                direction = VectorUnitize(data[traj_id][point_id] - data[traj_id][point_id - 1])  # 该点前进方向
+                direction = VectorUnitize([data[traj_id][point_id][0] - data[traj_id][point_id - 1][0],
+                                           data[traj_id][point_id][1] - data[traj_id][point_id - 1][1]])  # 该点前进方向
                 acceleration = (speed-last_speed) / delta_t  # 该点加速度
                 cell_speed_list[x][y].append(speed)  # 添加到网格速度列表
-                cell_direction_list.append(direction)  # 添加到网格方向列表
+                cell_direction_list[x][y].append(direction)  # 添加到网格方向列表
                 cell_acceleration_list[x][y].append(acceleration)    # 添加到网格加速度列表
                 last_speed = speed  # 更新上一个点的速度
+
+    #print("更新3D矩阵")
     for i in range(gridSize):
         for j in range(gridSize):
             if num_cell_points[i][j] == 0:  # 网格无点则保持为0
@@ -231,27 +256,34 @@ def EncodeTraj(data):
             else:  # 网格有点则取速度和加速度的中值，方向的平均值
                 pass
                 m_i3[i][j] = CalMedian(cell_speed_list[i][j])
-                m_i4[i][j] = CalAverage(cell_direction_list[i][j])
+                m_i4[i][j] = VecToAngle(CalAverage(cell_direction_list[i][j]))
                 m_i5[i][j] = CalMedian(cell_acceleration_list[i][j])
 
     M = [m_i1, m_i2, m_i3, m_i4, m_i5]
-    M = torch.tensor(M)
+    M = torch.tensor(M, dtype=torch.float32)
 
     return M
 
 
+def EncodeInd(data):
+    """
+    编码个体特征
+    :param data: 二维列表表示的轨迹数据，第1维表示轨迹中的位置点数目，第2维表示纬度和经度
+    :return: 编码后的含4个元素的向量，分别为轨迹距离、总用时、起始时间、平均速度
+    """
+    distance = 0
+    for i in range(1, len(data)):
+        distance += CalDist(data[i], data[i-1])
+    total_time = data[-1][2] - data[0][2]
+    start_time = data[0][2]
+    avg_speed = distance / total_time
+    return torch.tensor([distance, total_time, start_time, avg_speed], dtype=torch.float32)
+
+
 if __name__ == '__main__':
-    # user_id = "000"
-    # data = GetData(user_id)
-    # # print(data)
-    # EncodeTraj(data)
-    m_i1 = [[0 for i in range(gridSize)] for i in range(gridSize)]
-    m_i2 = [[0 for i in range(gridSize)] for i in range(gridSize)]
-    m_i3 = [[0 for i in range(gridSize)] for i in range(gridSize)]
-    m_i4 = [[0 for i in range(gridSize)] for i in range(gridSize)]
-    m_i5 = [[0 for i in range(gridSize)] for i in range(gridSize)]
-    M = [m_i1, m_i2, m_i3, m_i4, m_i5]
-    M = torch.tensor(M)
-    print(M)
+    user_id = "000"
+    data = GetData(user_id)
+    M = EncodeTrajWithIT2I([data[0]])
+    Ind = EncodeInd(data[0])
     print(M.shape)
 

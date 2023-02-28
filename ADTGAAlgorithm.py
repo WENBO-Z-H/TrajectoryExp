@@ -106,10 +106,6 @@ def SatisfyTDDMetric(realTrajectory, dummys, newDummy, TDDMetric):
         return False
 
 
-def AdaptiveDummy():
-    pass
-
-
 def Perturbation(dummy, k):
     pass
 

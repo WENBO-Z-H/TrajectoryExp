@@ -39,7 +39,7 @@ class DummyPoint:
         return False
 
 
-def MovingInNeighborhood(m, n):
+def MovingInNeighborhood(m, n, with_t):
     """
     生成一条虚拟轨迹
     :param m: 每次移动的幅度
@@ -50,8 +50,10 @@ def MovingInNeighborhood(m, n):
     dummyNexttemp = DummyPoint()  # 后一时刻用户位置及时间信息
     dummyNexttemp.lng = random.uniform(minLng, maxLng)
     dummyNexttemp.lat = random.uniform(minLat, maxLat)
-    # dummys = [[dummyNexttemp.lat, dummyNexttemp.lng, 0]]  # 初始状态，轨迹列表只有初始点
-    dummys = [[dummyNexttemp.lat, dummyNexttemp.lng]]  # 初始状态，轨迹列表只有初始点（删除时间维度）
+    if with_t:
+        dummys = [[dummyNexttemp.lat, dummyNexttemp.lng, 0]]  # 初始状态，轨迹列表只有初始点
+    else:
+        dummys = [[dummyNexttemp.lat, dummyNexttemp.lng]]  # 初始状态，轨迹列表只有初始点（删除时间维度）
 
     i = 0
     num_errors = 50  # 有时候出界后回不去，这种状态最多卡死num_errors次，就会随机选择一个位置跳出
@@ -63,8 +65,10 @@ def MovingInNeighborhood(m, n):
         dummyNexttemp.t = dummyPretemp.t + 1
         if dummyNexttemp.WithinBounds():  # 在规定区域内才添加到列表，否则重新生成
             dummyPretemp = dummyNexttemp
-            # dummys.append([dummyNexttemp.lat, dummyNexttemp.lng, dummyNexttemp.t])
-            dummys.append([dummyNexttemp.lat, dummyNexttemp.lng])  # 删除时间维度
+            if with_t:
+                dummys.append([dummyNexttemp.lat, dummyNexttemp.lng, dummyNexttemp.t])
+            else:
+                dummys.append([dummyNexttemp.lat, dummyNexttemp.lng])  # 删除时间维度
             i = i + 1
         else:  # 如果一直发生越界错误就随机找一个点（该情况存在但极少）
             if num_errors > 0:
@@ -72,7 +76,10 @@ def MovingInNeighborhood(m, n):
             else:
                 lng = random.uniform(minLng, maxLng)
                 lat = random.uniform(minLat, maxLat)
-                dummys.append([lat, lng])  # 删除时间维度
+                if with_t:
+                    dummys.append([lat, lng, dummyNexttemp.t])
+                else:
+                    dummys.append([lat, lng])  # 删除时间维度
 
     return dummys
 
