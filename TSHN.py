@@ -22,14 +22,14 @@ class TrajectoryDataset(Dataset):
         """
         self.train_mode = train_mode
         # 首先准备真实轨迹数据并编码
-        data = DataPreparation.GetData("000")  # 该函数设定是读取100条数据
+        data = DataPreparation.GetData("000")  # 该函数设定是读取100条数据（[traj_id, point_id, point]）
         real_traj_feature_list = []
         for i in range(len(data)):
-            M = DataPreparation.EncodeTrajWithIT2I([data[0]])
+            M = DataPreparation.EncodeTrajWithIT2I(data[0])
             Ind = DataPreparation.EncodeInd(data[0])
             real_traj_feature_list.append([M, Ind])
         # 然后准备虚拟轨迹数据并编码
-        dummy_traj_feature_list = self.GenerateDummyTrajectory(100)
+        dummy_traj_feature_list = self.GenerateDummyTrajectory(100)  # 格式与真实数据相同
         #print(real_traj_feature_list)
         # print(len(real_traj_feature_list))
         #print(dummy_traj_feature_list)
@@ -67,7 +67,7 @@ class TrajectoryDataset(Dataset):
         """
         if self.train_mode:  # 训练集
             if index < 79:  # 对应真真数据
-                return self.data[index], 100.
+                return self.data[index], 100.  # 两轨迹M和Ind的差，两轨迹相似度得分，下同
             else:  # 对应真假数据
                 return self.data[index], 0.
         else:  # 测试集
@@ -94,12 +94,10 @@ class TrajectoryDataset(Dataset):
         """
         trajetorys_feature = []
         for i in range(n):  # 生成x条轨迹
-            #print(i)
             dummy_traj = MNAlgorithm.MovingInNeighborhood(0.0001, 100, with_t=True)  # 生成单条轨迹
             # 单条轨迹处理
             M = DataPreparation.EncodeTrajWithIT2I([dummy_traj])
             Ind = DataPreparation.EncodeInd(dummy_traj)
-            #print(dummy_traj)
             trajetorys_feature.append([M, Ind])
         return trajetorys_feature
 
