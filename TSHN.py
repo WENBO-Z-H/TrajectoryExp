@@ -96,7 +96,7 @@ class TrajectoryDataset(Dataset):
         for i in range(n):  # 生成x条轨迹
             dummy_traj = MNAlgorithm.MovingInNeighborhood(0.0001, 100, with_t=True)  # 生成单条轨迹
             # 单条轨迹处理
-            M = DataPreparation.EncodeTrajWithIT2I([dummy_traj])
+            M = DataPreparation.EncodeTrajWithIT2I(dummy_traj)
             Ind = DataPreparation.EncodeInd(dummy_traj)
             trajetorys_feature.append([M, Ind])
         return trajetorys_feature
@@ -185,6 +185,7 @@ def TrainAndEvaluate(train_loader, test_loader):
     model = TSHN()
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
+
     for epoch in range(num_epochs):
         tmp_loss = 0
         for batch_idx, (data, target) in enumerate(train_loader):

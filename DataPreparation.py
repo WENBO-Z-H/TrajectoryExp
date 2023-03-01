@@ -106,7 +106,8 @@ def GetData(user_id):
     lng_str = []  # 经度
     time_str = []  # 时间
 
-    path = "..\\Geolife Trajectories 1.3 - 副本" + "\\Data" + "\\" + user_id + "\\Trajectory"  # 000的路径
+    path = "../Geolife-Trajectories-1.3" + "/Data" + "/" + user_id + "/Trajectory"  # 000的路径
+    # path = "..\\Geolife Trajectories 1.3 - 副本" + "\\Data" + "\\" + user_id + "\\Trajectory"  # 000的路径
     plt_files = os.scandir(path)
 
     data = []  # 最终读取结果
@@ -116,7 +117,8 @@ def GetData(user_id):
             break
         else:
             i += 1
-        path_item = path + "\\" + item.name
+        path_item = path + "/" + item.name
+        # path_item = path + "\\" + item.name
         with open(path_item, 'r+') as fp:
             for item in fp.readlines()[6:]:
                 item_list = item.split(',')
@@ -272,7 +274,7 @@ def EncodeInd(data):
 if __name__ == '__main__':
     user_id = "000"
     data = GetData(user_id)
-    M = EncodeTrajWithIT2I([data[0]])
+    M = EncodeTrajWithIT2I(data[0])
     Ind = EncodeInd(data[0])
     print(M.shape)
 
