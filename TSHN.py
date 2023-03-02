@@ -158,33 +158,41 @@ class TSHN(nn.Module):
 
 def CalAccuracy(pred, label):
     print(pred)
-    print("---")
     print(label)
+    # print("---")
+
     tp = 0
     tn = 0
     fn = 0
     fp = 0
-    for i, v in enumerate(pred):
-        # val = abs(v[i].item() - label[i].item())
-        val = v[i].item()
-        if val >= 50 and label[i].item() > 99:  # 预测为真
-            tp = tp + 1
-        if val < 50 and label[i].item() < 1:
-            tn = tn + 1
-        if val >= 50 and label[i].item() < 1:
-            fn = fn + 1
-        if val < 50 and label[i].item() > 99:
-            fp = fp + 1
+    # for i, v in enumerate(pred):
+    val = abs(pred.item() - label.item())
+    pred_label = pred.item()
+    if val < 50 and pred_label >= 50:  # 预测对的正例
+        tp = tp + 1
+        print("tp")
+    if val < 50 and pred_label < 50:   # 预测对的负例
+        tn = tn + 1
+        print("tn")
+    if val >= 50 and pred_label < 50:    # 预测错的负例
+        fn = fn + 1
+        print("fn")
+    if val >= 50 and pred_label >= 50:   # 预测错的正例
+        fp = fp + 1
+        print("fp")
+
+    print("---")
 
     return tp, tn, fn, fp
 
 
 def TrainAndEvaluate(train_loader, test_loader):
     num_epochs = 50
+    learning_rate = 0.0001
 
     model = TSHN()
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     for epoch in range(num_epochs):
         tmp_loss = 0
@@ -208,14 +216,15 @@ def TrainAndEvaluate(train_loader, test_loader):
         FN = 0  # 被模型预测为正类的负样本
         FP = 0  # 被模型预测为负类的正样本
         model.eval()
-        for (data_test, target_test) in test_loader:
-            output_test = model(data_test[0], data_test[1])
-            target_test = target_test.to(torch.float32)
-            tp, tn, fn, fp = CalAccuracy(output_test, target_test)
-            TP = TP + tp
-            TN = TN + tn
-            FN = FN + fn
-            FP = FP + fp
+        with torch.no_grad():
+            for (data_test, target_test) in test_loader:
+                output_test = model(data_test[0], data_test[1])
+                target_test = target_test.to(torch.float32)
+                tp, tn, fn, fp = CalAccuracy(output_test, target_test)
+                TP = TP + tp
+                TN = TN + tn
+                FN = FN + fn
+                FP = FP + fp
         acc = (TP + TN) / (TP + TN + FN + FP)
         print("acc:", acc, "TP:", TP, "TN:", TN, "FN:", FN, "FP:", FP)
 
@@ -226,7 +235,7 @@ if __name__ == '__main__':
     # exit(0)
     batch_size = 5
     train_loader = torch.utils.data.DataLoader(training_set, batch_size=batch_size, shuffle=True, num_workers=0)
-    test_loader = torch.utils.data.DataLoader(testing_set, batch_size=batch_size, shuffle=True, num_workers=0)
+    test_loader = torch.utils.data.DataLoader(testing_set, batch_size=1, shuffle=True, num_workers=0)
     TrainAndEvaluate(train_loader, test_loader)
     # for batch_idx, (data, target) in enumerate(train_loader):
     #     print(data[0])
